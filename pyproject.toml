@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "india-quant-research"
+version = "0.1.0"
+description = "Auditable, cost-aware research and backtesting for a small Indian ETF portfolio"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "pandas>=1.5"]
+license = {text = "MIT"}
+readme = "README.md"
+
+[project.optional-dependencies]
+data = ["requests>=2.31"]
+dev = ["pytest>=8", "ruff>=0.8"]
+broker = ["kiteconnect>=5.0.1"]
+
+[project.scripts]
+india-quant = "india_quant.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

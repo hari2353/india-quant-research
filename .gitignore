@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local market data and generated reports
+data/*.csv
+data/*.parquet
+reports*/
+paper/
+live/
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Editors and operating-system files
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
