@@ -78,6 +78,10 @@ CREATE TABLE IF NOT EXISTS fills (
 );
 CREATE INDEX IF NOT EXISTS runs_by_strategy_date ON runs(strategy, run_date);
 CREATE INDEX IF NOT EXISTS orders_by_strategy_date ON orders(strategy, run_date);
+CREATE VIEW IF NOT EXISTS paper_rejections AS
+    SELECT strategy, run_date, symbol, side, quantity, requested_price, reason
+    FROM orders
+    WHERE status <> 'filled';
 """
 
 
@@ -280,3 +284,15 @@ class PaperLedger:
         summaries = [self.summary(strategy) for strategy in strategies if self._latest_run(strategy)]
         pd.DataFrame(summaries).to_csv(out / "paper_summary.csv", index=False)
         (out / "paper_summary.json").write_text(json.dumps(summaries, indent=2, default=str), encoding="utf-8")
+
+    def error_analysis(self) -> list[sqlite3.Row]:
+        """Rejected orders grouped by (strategy, reason) — error-analysis memory."""
+        return list(self.connection.execute(
+            "SELECT strategy, reason, COUNT(*) AS count FROM paper_rejections "
+            "GROUP BY strategy, reason ORDER BY count DESC, reason"))
+
+    def run_status(self) -> list[sqlite3.Row]:
+        """Every ledger run: date, gate outcome and equity — the audit trail."""
+        return list(self.connection.execute(
+            "SELECT strategy, run_date, status, reason, equity FROM runs "
+            "ORDER BY run_date, strategy"))

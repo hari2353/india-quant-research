@@ -38,6 +38,9 @@ def main() -> None:
     paper.add_argument("--out", type=Path, default=Path("paper/reports"))
     paper.add_argument("--date", type=str)
     paper.add_argument("--replay", action="store_true")
+    analyze = sub.add_parser("paper-analyze")
+    analyze.add_argument("--db", type=Path, default=Path("paper/paper.db"))
+    analyze.add_argument("--out", type=Path, default=None)
     live_plan = sub.add_parser("live-plan")
     live_plan.add_argument("--prices", type=Path, required=True)
     live_plan.add_argument("--plan", type=Path, default=Path("live/plan.json"))
@@ -73,6 +76,20 @@ def main() -> None:
                     print(f"{result.date.date()} {strategy}: {result.status} {result.reason} "
                           f"equity=Rs {result.equity:,.2f} orders={result.order_count}")
             ledger.export(args.out, strategies)
+        finally:
+            ledger.close()
+    elif args.command == "paper-analyze":
+        ledger = PaperLedger(args.db)
+        try:
+            rejections = [dict(r) for r in ledger.error_analysis()]
+            runs = [dict(r) for r in ledger.run_status()]
+            for row in rejections:
+                print(f"{row['strategy']}: rejected {row['reason']} x{row['count']}")
+            print(f"runs: {len(runs)} ledgered")
+            if args.out:
+                args.out.parent.mkdir(parents=True, exist_ok=True)
+                args.out.write_text(json.dumps({"rejections": rejections, "runs": runs},
+                                               indent=2, default=str), encoding="utf-8")
         finally:
             ledger.close()
     elif args.command == "live-plan":

@@ -12,7 +12,7 @@ plan-approval gate — see `LIVE-TRADING.md`).
 | Code-gen of strategies | — | deferred; same shape as STAIR/QLoRA milestones (graph-memory T12) rather than LLM code-gen |
 | Backtest / OOS / robustness gates | `backtest.py` walk-forward, `stress.py` (drawdown/crash/fee-stress), `metrics.py` (CAGR, maxDD, PF, trades) | **done** |
 | Versioned self-improvement loop | git history + immutable SQLite paper ledger (idempotent replays via `source_hash`) | **partial** — versioned inputs recorded, no auto-promotion; promotion stays a human decision |
-| Error-analysis memory | `orders.status/reason` + `runs.reason` in the SQLite ledgers (`paper/paper.db`) | **partial v1** — rejections recorded; analysis views deferred |
+| Error-analysis memory | `orders.status/reason` + `runs.reason` in the SQLite ledgers (`paper/paper.db`); `paper_rejections` view + `paper-analyze` CLI export | **v1 done** — grouped rejection counts export; analysis views deferred |
 | Data: Yahoo (research) | `data.py` adapter | done (research-only, not a market-data licence) |
 | Data: TradingView / MT5 | — | deferred behind the same adapter interface in `data.py` |
 | Data: news/calendar, alt-data | — | deferred |
@@ -22,7 +22,7 @@ plan-approval gate — see `LIVE-TRADING.md`).
 ## Adoption order (paper-first, per ledger T13/T21)
 
 1. Real Yahoo data → backtest → **paper-run daily/monthly** on the DB (running).
-2. Error-analysis SQL views over the existing ledger tables (small addition).
-3. Second data adapter (news/calendar) only after a use in strategies exists.
+2. Error-analysis SQL views over the existing ledger tables (**done**: `paper_rejections` view + `paper-analyze`).
+3. Second data adapter (news/calendar) only after a use in strategies exists — **next M1 slice**.
 4. Code-gen/orchestrator/agents and self-improvement remain future work
    (graph-memory T12); nothing auto-trades.
