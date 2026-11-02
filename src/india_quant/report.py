@@ -12,7 +12,7 @@ from .stress import bootstrap_drawdowns
 
 def research_report(prices: pd.DataFrame, out: Path, config: PortfolioConfig | None = None) -> dict:
     config = config or PortfolioConfig()
-    strategies: tuple[StrategyName, ...] = ("buy_hold", "equal_weight", "balanced", "defensive_rotation")
+    strategies: tuple[StrategyName, ...] = ("buy_hold", "equal_weight", "balanced", "defensive_rotation", "forecast_tilt")
     results = {strategy: run_backtest(prices, strategy, config) for strategy in strategies}
     summary = pd.DataFrame({strategy: result.metrics for strategy, result in results.items()}).T
     wf = walk_forward(prices, strategies, config)

@@ -68,7 +68,7 @@ def main() -> None:
         prices = load_prices(args.prices)
         ledger = PaperLedger(args.db)
         try:
-            strategies = ("equal_weight", "balanced")
+            strategies = ("equal_weight", "balanced", "forecast_tilt")
             dates = sorted(prices["date"].unique()) if args.replay else [pd.Timestamp(args.date).normalize() if args.date else prices["date"].max()]
             for date_value in dates:
                 for strategy in strategies:

@@ -40,6 +40,21 @@ def target_weights(history: pd.DataFrame, strategy: StrategyName, config: Portfo
         weights = pd.Series({symbol: target.get(symbol, 0.0) for symbol in symbols})
         return _cap_and_normalize(weights, config)
 
+    if strategy == "forecast_tilt":
+        # Start from balanced, tilt by zero-shot forecast signal (TimesFM/Kronos).
+        target = {"NIFTYBEES.NS": 0.60, "GOLDBEES.NS": 0.20, "LIQUIDBEES.NS": 0.15}
+        weights = pd.Series({symbol: target.get(symbol, 0.0) for symbol in symbols})
+        try:
+            from .forecast import forecast_signal
+            for symbol in symbols:
+                col = history[symbol] if symbol in history.columns else None
+                if col is not None and len(col) >= 5:
+                    sig = forecast_signal(col, backend="auto")
+                    weights[symbol] = weights[symbol] * (1.0 + 0.5 * sig)
+        except Exception:
+            pass
+        return _cap_and_normalize(weights, config)
+
     if len(history) < 200:
         return pd.Series(0.0, index=symbols)
     returns = history.pct_change().dropna()

@@ -5,7 +5,7 @@ from typing import Literal
 
 import pandas as pd
 
-StrategyName = Literal["buy_hold", "equal_weight", "balanced", "defensive_rotation"]
+StrategyName = Literal["buy_hold", "equal_weight", "balanced", "defensive_rotation", "forecast_tilt"]
 
 
 @dataclass(frozen=True)
