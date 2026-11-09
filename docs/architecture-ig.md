@@ -15,7 +15,7 @@ plan-approval gate — see `LIVE-TRADING.md`).
 | Error-analysis memory | `orders.status/reason` + `runs.reason` in the SQLite ledgers (`paper/paper.db`); `paper_rejections` view + `paper-analyze` CLI export | **v1 done** — grouped rejection counts export; analysis views deferred |
 | Data: Yahoo (research) | `data.py` adapter | done (research-only, not a market-data licence) |
 | Data: TradingView / MT5 | — | deferred behind the same adapter interface in `data.py` |
-| Data: news/calendar, alt-data | — | deferred |
+| Data: news/calendar | `calendar.py` committed RBI-MPC/Budget table + `event_defensive` strategy in `strategies.py` | **v1 done** (committed dates, causal; alt-data still deferred) |
 | Broker adapter | `broker.py` + `cli.py live-plan/approve-plan/live-execute` | **done, approval-gated**, disabled by default |
 | Live/paper switch | `LIVE-TRADING.md`, plan files + signed approval, separate `live/live.db` | done |
 
@@ -23,6 +23,6 @@ plan-approval gate — see `LIVE-TRADING.md`).
 
 1. Real Yahoo data → backtest → **paper-run daily/monthly** on the DB (running).
 2. Error-analysis SQL views over the existing ledger tables (**done**: `paper_rejections` view + `paper-analyze`).
-3. Second data adapter (news/calendar) only after a use in strategies exists — **next M1 slice**.
+3. Second data adapter: **calendar done** (`calendar.py` + `event_defensive`); news/alt-data only after a use in strategies exists.
 4. Code-gen/orchestrator/agents and self-improvement remain future work
    (graph-memory T12); nothing auto-trades.

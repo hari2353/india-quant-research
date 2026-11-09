@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 import numpy as np
 import pandas as pd
 
+from .calendar import upcoming_events
 from .models import PortfolioConfig, StrategyName
 
 
@@ -35,9 +38,20 @@ def target_weights(history: pd.DataFrame, strategy: StrategyName, config: Portfo
         return weights
     if strategy == "equal_weight":
         return pd.Series((1.0 - config.min_cash_buffer) / len(symbols), index=symbols)
-    if strategy == "balanced":
+    if strategy in ("balanced", "event_defensive"):
         target = {"NIFTYBEES.NS": 0.60, "GOLDBEES.NS": 0.20, "LIQUIDBEES.NS": 0.15}
         weights = pd.Series({symbol: target.get(symbol, 0.0) for symbol in symbols})
+        if strategy == "event_defensive":
+            # The event calendar is known in advance, so this stays causal;
+            # outside event windows the strategy is exactly balanced.
+            if len(history) == 0:
+                as_of = date.today()
+            else:
+                as_of = history.index[-1].date() + timedelta(days=1)
+            if upcoming_events(as_of) and "NIFTYBEES.NS" in weights.index and "LIQUIDBEES.NS" in weights.index:
+                shift = 0.20 * weights["NIFTYBEES.NS"]
+                weights["NIFTYBEES.NS"] -= shift
+                weights["LIQUIDBEES.NS"] += shift
         return _cap_and_normalize(weights, config)
 
     if strategy == "forecast_tilt":

@@ -80,7 +80,7 @@ def run_backtest(prices: pd.DataFrame, strategy: StrategyName,
     trades: list[dict] = []
     active_weights = pd.Series(0.0, index=symbols)
     for position, date in enumerate(common):
-        initial_static = position == 0 and strategy in {"buy_hold", "equal_weight", "balanced"}
+        initial_static = position == 0 and strategy in {"buy_hold", "equal_weight", "balanced", "event_defensive"}
         scheduled_rebalance = date in rebalance_dates and position > 0 and strategy != "buy_hold"
         if initial_static or scheduled_rebalance:
             history = close_panel.iloc[:position]
