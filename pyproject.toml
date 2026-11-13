@@ -15,6 +15,7 @@ readme = "README.md"
 data = ["requests>=2.31"]
 dev = ["pytest>=8", "ruff>=0.8"]
 broker = ["kiteconnect>=5.0.1"]
+mcp = ["fastmcp>=2"]
 
 [project.scripts]
 india-quant = "india_quant.cli:main"

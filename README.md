@@ -53,6 +53,20 @@ The optimizer is not allowed to select a strategy by in-sample return alone. A c
 research-worthy when it is compared with simple baselines, uses walk-forward splits, includes costs, and reports
 drawdown and stress outcomes.
 
+## MCP server
+
+A read-only MCP server exposes this repo's market data to AI agents (WorkBuddy,
+Claude Desktop, Cursor) over stdio:
+
+```bash
+pip install -e ".[mcp]"
+python mcp/server.py
+```
+
+Tools: `get_quote`, `get_history`, `list_universe`. See `mcp/README.md` for client
+configuration and `mcp/evals/eval.xml` for agent-level checks. Yahoo data is delayed
+and unlicensed, so the server is for research only and has no order surface.
+
 ## Paper trading
 
 `paper-run` is local simulation only. It does not contact Zerodha, create API keys, or place orders. It uses the

@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>How many tools does the india-quant-research MCP server expose?</question>
+    <answer>3</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>List the exact tool names exposed by the server, in the order they appear in server.py.</question>
+    <answer>get_quote, get_history, list_universe</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Which symbol in the research universe is the gold ETF?</question>
+    <answer>GOLDBEES.NS</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Which symbol in the research universe is the liquid/low-duration parking asset?</question>
+    <answer>LIQUIDBEES.NS</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Which transport does the server use when run with `python mcp/server.py`?</question>
+    <answer>stdio</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What is the maximum number of symbols allowed per get_history call?</question>
+    <answer>5</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What is the maximum date span allowed per get_history call?</question>
+    <answer>3 years</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Do the server's tools declare a read-only hint to MCP clients?</question>
+    <answer>yes</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Which currency do quotes for NSE-listed ETFs in this server return?</question>
+    <answer>INR</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Can the server place orders or talk to a broker?</question>
+    <answer>no</answer>
+  </qa_pair>
+</evaluation>
