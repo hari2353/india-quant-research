@@ -34,3 +34,6 @@ live/
 *.swp
 Thumbs.db
 Desktop.ini
+
+# stray self-copy from the copy mishap; never track
+/india-quant-research/

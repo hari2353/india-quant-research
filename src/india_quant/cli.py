@@ -32,6 +32,10 @@ def main() -> None:
     backtest = sub.add_parser("backtest")
     backtest.add_argument("--prices", type=Path, required=True)
     backtest.add_argument("--out", type=Path, default=Path("reports"))
+    tearsheet = sub.add_parser("tearsheet")
+    tearsheet.add_argument("--prices", type=Path, required=True)
+    tearsheet.add_argument("--strategy", choices=["buy_hold", "equal_weight", "balanced", "defensive_rotation", "forecast_tilt", "event_defensive"], default="equal_weight")
+    tearsheet.add_argument("--out", type=Path, default=Path("reports/tearsheet.md"))
     paper = sub.add_parser("paper-run")
     paper.add_argument("--prices", type=Path, required=True)
     paper.add_argument("--db", type=Path, default=Path("paper/paper.db"))
@@ -61,9 +65,23 @@ def main() -> None:
         print(f"saved {len(prices):,} rows to {args.out}")
     elif args.command == "backtest":
         payload = research_report(load_prices(args.prices), args.out, PortfolioConfig())
+        guard = payload["overfit"]
         for strategy, metrics in payload["summary"].items():
+            dsr = guard["deflated_sharpe"].get(strategy)
+            dsr_text = f" DSR={dsr:.2f}" if dsr is not None else ""
             print(f"{strategy}: CAGR={float(metrics['cagr']):.2%} maxDD={float(metrics['max_drawdown']):.2%} "
-                  f"final=Rs {float(metrics['final_value']):,.0f}")
+                  f"final=Rs {float(metrics['final_value']):,.0f}{dsr_text}")
+        pbo_value = guard["pbo"]
+        if pbo_value is None:
+            print(f"overfit guard: {payload.get('overfit_note', 'pbo unavailable')}")
+        else:
+            verdict = "HIGH — in-sample winners rarely repeat out of sample" if pbo_value >= 0.5 else "acceptable"
+            print(f"overfit guard: PBO={pbo_value:.2f} ({verdict})")
+    elif args.command == "tearsheet":
+        from .report import tearsheet as build_tearsheet
+
+        build_tearsheet(load_prices(args.prices), args.strategy, args.out)
+        print(f"tearsheet written: {args.out}")
     elif args.command == "paper-run":
         prices = load_prices(args.prices)
         ledger = PaperLedger(args.db)

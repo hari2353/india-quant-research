@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 pytest.importorskip("fastmcp", reason="fastmcp not installed")
-from fastmcp import Client  # noqa: E402
+from fastmcp import Client
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SERVER_PATH = REPO_ROOT / "mcp" / "server.py"

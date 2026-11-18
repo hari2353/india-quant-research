@@ -53,6 +53,17 @@ The optimizer is not allowed to select a strategy by in-sample return alone. A c
 research-worthy when it is compared with simple baselines, uses walk-forward splits, includes costs, and reports
 drawdown and stress outcomes.
 
+`backtest` enforces this by default now: every candidate carries a **deflated Sharpe ratio** (multiple-testing
+corrected for the whole candidate panel, Bailey & López de Prado 2014) and the report prints the cross-candidate
+**probability of backtest overfitting** (PBO via CSCV) with a plain verdict — `PBO >= 0.5` is flagged
+`HIGH — in-sample winners rarely repeat out of sample`. Thin history is omitted with a stated reason, never faked.
+
+## Tearsheets
+
+`india-quant tearsheet --prices data/prices.csv --strategy equal_weight --out reports/tearsheet.md` renders one
+candidate as bounded Markdown: CAGR/vol, Sharpe **and deflated Sharpe**, Sortino, omega, tail ratio, VaR 95,
+max drawdown/Calmar, turnover, and the last 24 months of compounded monthly returns.
+
 ## MCP server
 
 A read-only MCP server exposes this repo's market data to AI agents (WorkBuddy,

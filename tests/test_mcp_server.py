@@ -5,7 +5,6 @@ import sys
 from datetime import date
 from pathlib import Path
 
-import pandas as pd
 import pytest
 
 from india_quant.data import make_fixture_prices
