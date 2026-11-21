@@ -112,6 +112,11 @@ india-quant live-execute --plan live\plan.json --approval live\plan.approved --d
 The last command refuses to run unless the explicit live acknowledgment, fresh access token, disabled kill switch,
 matching approval hash and broker-position reconciliation all pass.
 
+## Research footprint (Harvard Edge TinyML-Footprint cross-pollination)
+
+`india_quant.footprint` reports the operational energy and carbon of a
+backtest run from CPU-hours and power, on the same operational-only boundary.
+
 ## License
 
 MIT
