@@ -117,6 +117,6 @@ matching approval hash and broker-position reconciliation all pass.
 `india_quant.footprint` reports the operational energy and carbon of a
 backtest run from CPU-hours and power, on the same operational-only boundary.
 
-## License
+## Risk metrics (Microsoft QLib cross-pollination)\n\n`india_quant.risk` provides Sharpe, Sortino, max drawdown, historical VaR and\nCVaR over a return series, with no scipy dependency.\n\n## License
 
 MIT
