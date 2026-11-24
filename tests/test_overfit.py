@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from india_quant.data import make_fixture_prices
 from india_quant.metrics import monthly_returns, omega_ratio, sortino_ratio, tail_ratio, var_95
 from india_quant.overfit import deflated_sharpe, pbo
 

@@ -1,6 +1,5 @@
-import numpy as np
 import pandas as pd
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from forecast import naive_forecast, forecast_series, forecast_signal
 
