@@ -60,9 +60,7 @@ def test_list_universe_over_protocol():
 def test_invalid_call_returns_tool_error():
     async def main():
         async with Client(server.mcp) as client:
-            return await client.call_tool(
-                "get_quote", {"symbols": [""]}, raise_on_error=False
-            )
+            return await client.call_tool("get_quote", {"symbols": [""]}, raise_on_error=False)
 
     result = _run(main())
     assert result.is_error

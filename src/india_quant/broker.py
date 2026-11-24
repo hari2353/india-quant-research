@@ -50,13 +50,16 @@ class LiveConfig:
             access_token=access_token,
             capital_limit=float(os.environ.get("INDIA_QUANT_LIVE_CAPITAL", "50000")),
             max_order_value=float(os.environ.get("INDIA_QUANT_MAX_ORDER_VALUE", "15000")),
-            max_total_order_value=float(os.environ.get("INDIA_QUANT_MAX_TOTAL_ORDER_VALUE", "50000")),
+            max_total_order_value=float(
+                os.environ.get("INDIA_QUANT_MAX_TOTAL_ORDER_VALUE", "50000")
+            ),
             max_data_age_days=int(os.environ.get("INDIA_QUANT_MAX_DATA_AGE_DAYS", "2")),
             order_type=os.environ.get("INDIA_QUANT_ORDER_TYPE", "LIMIT").upper(),
             product=os.environ.get("INDIA_QUANT_PRODUCT", "CNC").upper(),
             execute_live=os.environ.get("INDIA_QUANT_LIVE_TRADING") == "I_UNDERSTAND_LIVE_RISK",
             kill_switch=os.environ.get("INDIA_QUANT_KILL_SWITCH", "ON").upper() != "OFF",
-            allow_unmanaged_positions=os.environ.get("INDIA_QUANT_ALLOW_UNMANAGED_POSITIONS") == "YES",
+            allow_unmanaged_positions=os.environ.get("INDIA_QUANT_ALLOW_UNMANAGED_POSITIONS")
+            == "YES",
         )
 
     def validate_for_execution(self) -> None:
@@ -70,7 +73,10 @@ class LiveConfig:
             raise BrokerError("only CNC delivery orders are supported")
         if self.order_type not in {"LIMIT", "MARKET"}:
             raise BrokerError("order type must be LIMIT or MARKET")
-        if self.order_type == "MARKET" and os.environ.get("INDIA_QUANT_ALLOW_MARKET_ORDERS") != "YES":
+        if (
+            self.order_type == "MARKET"
+            and os.environ.get("INDIA_QUANT_ALLOW_MARKET_ORDERS") != "YES"
+        ):
             raise BrokerError("market orders require INDIA_QUANT_ALLOW_MARKET_ORDERS=YES")
         if self.capital_limit <= 0 or self.max_order_value <= 0 or self.max_total_order_value <= 0:
             raise BrokerError("live limits must be positive")
@@ -83,7 +89,9 @@ class KiteBroker:
         try:
             from kiteconnect import KiteConnect
         except ImportError as exc:
-            raise BrokerError("install the optional broker dependency: pip install -e .[broker]") from exc
+            raise BrokerError(
+                "install the optional broker dependency: pip install -e .[broker]"
+            ) from exc
         if not config.api_key or not config.access_token:
             raise BrokerError("KITE_API_KEY and KITE_ACCESS_TOKEN are required")
         self.config = config
@@ -95,7 +103,9 @@ class KiteBroker:
         try:
             from kiteconnect import KiteConnect
         except ImportError as exc:
-            raise BrokerError("install the optional broker dependency: pip install -e .[broker]") from exc
+            raise BrokerError(
+                "install the optional broker dependency: pip install -e .[broker]"
+            ) from exc
         return KiteConnect(api_key=api_key).login_url()
 
     def positions(self) -> list[dict[str, Any]]:
@@ -152,8 +162,13 @@ def normalize_positions(raw: list[dict[str, Any]]) -> tuple[dict[str, int], tupl
     return positions, tuple(sorted(set(unmanaged)))
 
 
-def build_trade_plan(prices: pd.DataFrame, strategy: StrategyName, broker: BrokerClient,
-                     config: LiveConfig, run_date: pd.Timestamp | str | None = None) -> TradePlan:
+def build_trade_plan(
+    prices: pd.DataFrame,
+    strategy: StrategyName,
+    broker: BrokerClient,
+    config: LiveConfig,
+    run_date: pd.Timestamp | str | None = None,
+) -> TradePlan:
     """Build a plan from prior history, broker positions and current broker quotes.
 
     This function never submits an order. The source file must contain the latest completed session and must not
@@ -163,8 +178,15 @@ def build_trade_plan(prices: pd.DataFrame, strategy: StrategyName, broker: Broke
     source_date = pd.Timestamp(prices["date"].max()).normalize()
     age = (run_timestamp - source_date).days
     if age < 0 or age > config.max_data_age_days:
-        raise BrokerError(f"market data is stale: source={source_date.date()} run={run_timestamp.date()}")
-    history = prices[prices["date"] <= source_date].pivot(index="date", columns="symbol", values="adj_close").sort_index().ffill()
+        raise BrokerError(
+            f"market data is stale: source={source_date.date()} run={run_timestamp.date()}"
+        )
+    history = (
+        prices[prices["date"] <= source_date]
+        .pivot(index="date", columns="symbol", values="adj_close")
+        .sort_index()
+        .ffill()
+    )
     current = prices[prices["date"].eq(source_date)].set_index("symbol")
     if set(RESEARCH_UNIVERSE) - set(current.index):
         raise BrokerError("market data does not contain the complete managed universe")
@@ -173,8 +195,13 @@ def build_trade_plan(prices: pd.DataFrame, strategy: StrategyName, broker: Broke
         raise BrokerError(f"unmanaged NSE positions block execution: {', '.join(unmanaged)}")
     symbols = [_broker_symbol(symbol) for symbol in RESEARCH_UNIVERSE]
     quotes = broker.quotes(symbols)
-    weights = target_weights(history.iloc[:-1], strategy, PortfolioConfig(initial_capital=config.capital_limit))
-    target = {symbol: int((weights.get(f"{symbol}.NS", 0.0) * config.capital_limit) // quotes[symbol]) for symbol in symbols}
+    weights = target_weights(
+        history.iloc[:-1], strategy, PortfolioConfig(initial_capital=config.capital_limit)
+    )
+    target = {
+        symbol: int((weights.get(f"{symbol}.NS", 0.0) * config.capital_limit) // quotes[symbol])
+        for symbol in symbols
+    }
     current_positions = {symbol: broker_positions.get(symbol, 0) for symbol in symbols}
     orders: list[PlannedOrder] = []
     for symbol in symbols:
@@ -185,7 +212,11 @@ def build_trade_plan(prices: pd.DataFrame, strategy: StrategyName, broker: Broke
             leg = 0
             while remaining:
                 quantity = min(remaining, max(1, int(config.max_order_value // quotes[symbol])))
-                orders.append(PlannedOrder(symbol, side, quantity, quotes[symbol], quantity * quotes[symbol], leg))
+                orders.append(
+                    PlannedOrder(
+                        symbol, side, quantity, quotes[symbol], quantity * quotes[symbol], leg
+                    )
+                )
                 remaining -= quantity
                 leg += 1
         orders.sort(key=lambda order: (order.side != "SELL", order.symbol))
@@ -194,9 +225,13 @@ def build_trade_plan(prices: pd.DataFrame, strategy: StrategyName, broker: Broke
     if any(order.value > config.max_order_value + 1e-9 for order in orders):
         raise BrokerError("plan contains an order above max order value")
     unsigned = {
-        "strategy": strategy, "run_date": str(run_timestamp.date()), "source_date": str(source_date.date()),
-        "capital_limit": config.capital_limit, "current_positions": current_positions,
-        "target_positions": target, "orders": [asdict(order) for order in orders],
+        "strategy": strategy,
+        "run_date": str(run_timestamp.date()),
+        "source_date": str(source_date.date()),
+        "capital_limit": config.capital_limit,
+        "current_positions": current_positions,
+        "target_positions": target,
+        "orders": [asdict(order) for order in orders],
         "unmanaged_positions": list(unmanaged),
     }
     digest = hashlib.sha256(json.dumps(unsigned, sort_keys=True).encode("utf-8")).hexdigest()
@@ -233,7 +268,9 @@ class LiveLedger:
         self.connection.executescript(LIVE_SCHEMA)
         columns = {row[1] for row in self.connection.execute("PRAGMA table_info(live_submissions)")}
         if columns and "leg" not in columns:
-            raise BrokerError("live ledger schema is outdated; use a new live/live.db before execution")
+            raise BrokerError(
+                "live ledger schema is outdated; use a new live/live.db before execution"
+            )
         self.connection.commit()
 
     def close(self) -> None:
@@ -242,7 +279,12 @@ class LiveLedger:
     def audit(self, event_type: str, payload: dict[str, Any], plan_hash: str | None = None) -> None:
         self.connection.execute(
             "INSERT INTO audit_events(event_type, plan_hash, payload, created_at) VALUES (?, ?, ?, ?)",
-            (event_type, plan_hash, json.dumps(payload, sort_keys=True, default=str), datetime.now(timezone.utc).isoformat()),
+            (
+                event_type,
+                plan_hash,
+                json.dumps(payload, sort_keys=True, default=str),
+                datetime.now(timezone.utc).isoformat(),
+            ),
         )
         self.connection.commit()
 
@@ -253,11 +295,21 @@ class LiveLedger:
         ).fetchone()
         return row is not None
 
-    def record(self, plan_hash: str, order: PlannedOrder, broker_order_id: str | None, status: str) -> None:
+    def record(
+        self, plan_hash: str, order: PlannedOrder, broker_order_id: str | None, status: str
+    ) -> None:
         self.connection.execute(
             "INSERT OR IGNORE INTO live_submissions VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (plan_hash, order.symbol, order.side, order.quantity, order.leg, broker_order_id, status,
-             datetime.now(timezone.utc).isoformat()),
+            (
+                plan_hash,
+                order.symbol,
+                order.side,
+                order.quantity,
+                order.leg,
+                broker_order_id,
+                status,
+                datetime.now(timezone.utc).isoformat(),
+            ),
         )
         self.connection.commit()
 
@@ -277,8 +329,13 @@ def approval_matches(plan: TradePlan, path: Path) -> bool:
     return path.exists() and path.read_text(encoding="utf-8").strip() == plan.hash
 
 
-def execute_plan(plan: TradePlan, broker: BrokerClient, ledger: LiveLedger, config: LiveConfig,
-                 approval_path: Path) -> list[dict[str, str]]:
+def execute_plan(
+    plan: TradePlan,
+    broker: BrokerClient,
+    ledger: LiveLedger,
+    config: LiveConfig,
+    approval_path: Path,
+) -> list[dict[str, str]]:
     config.validate_for_execution()
     if not approval_matches(plan, approval_path):
         raise BrokerError("approval file does not match the plan hash")
@@ -295,9 +352,14 @@ def execute_plan(plan: TradePlan, broker: BrokerClient, ledger: LiveLedger, conf
             results.append({"symbol": order.symbol, "status": "already_submitted"})
             continue
         payload = {
-            "exchange": "NSE", "tradingsymbol": order.symbol, "transaction_type": order.side,
-            "quantity": order.quantity, "order_type": config.order_type, "product": config.product,
-            "validity": "DAY", "tag": f"iq{plan.hash[:12]}l{order.leg}",
+            "exchange": "NSE",
+            "tradingsymbol": order.symbol,
+            "transaction_type": order.side,
+            "quantity": order.quantity,
+            "order_type": config.order_type,
+            "product": config.product,
+            "validity": "DAY",
+            "tag": f"iq{plan.hash[:12]}l{order.leg}",
         }
         if config.order_type == "LIMIT":
             payload["price"] = order.limit_price
@@ -306,9 +368,13 @@ def execute_plan(plan: TradePlan, broker: BrokerClient, ledger: LiveLedger, conf
         except Exception as exc:
             ledger.audit("order_failed", {"order": payload, "error": repr(exc)}, plan.hash)
             ledger.record(plan.hash, order, None, "failed")
-            raise BrokerError(f"broker rejected {order.side} {order.quantity} {order.symbol}") from exc
+            raise BrokerError(
+                f"broker rejected {order.side} {order.quantity} {order.symbol}"
+            ) from exc
         ledger.record(plan.hash, order, broker_order_id, "submitted")
-        ledger.audit("order_submitted", {"order": payload, "broker_order_id": broker_order_id}, plan.hash)
+        ledger.audit(
+            "order_submitted", {"order": payload, "broker_order_id": broker_order_id}, plan.hash
+        )
         results.append({"symbol": order.symbol, "status": "submitted", "order_id": broker_order_id})
     ledger.audit("execution_complete", {"count": len(results)}, plan.hash)
     return results

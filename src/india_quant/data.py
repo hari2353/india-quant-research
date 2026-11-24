@@ -43,7 +43,7 @@ def clean_price_anomalies(frame: pd.DataFrame) -> pd.DataFrame:
             base = values[start]
             for end in range(start + 2, min(start + 5, len(values))):
                 future = values[end]
-                interior = values[start + 1:end]
+                interior = values[start + 1 : end]
                 if not 0.5 <= future / base <= 2.0:
                     continue
                 low_factor = (interior / base < 0.4).all()
@@ -100,7 +100,9 @@ def download_yahoo_daily(symbols: tuple[str, ...], start: date, end: date) -> pd
             raise ValueError(f"Yahoo returned no data for {symbol}")
         chart = result[0]
         quote_data = chart["indicators"]["quote"][0]
-        adjusted = chart["indicators"].get("adjclose", [{"adjclose": quote_data["close"]}])[0]["adjclose"]
+        adjusted = chart["indicators"].get("adjclose", [{"adjclose": quote_data["close"]}])[0][
+            "adjclose"
+        ]
         frame = pd.DataFrame(
             {
                 "open": quote_data["open"],
@@ -110,7 +112,9 @@ def download_yahoo_daily(symbols: tuple[str, ...], start: date, end: date) -> pd
                 "adj_close": adjusted,
                 "volume": quote_data["volume"],
             },
-            index=pd.to_datetime(chart["timestamp"], unit="s", utc=True).tz_convert(None).normalize(),
+            index=pd.to_datetime(chart["timestamp"], unit="s", utc=True)
+            .tz_convert(None)
+            .normalize(),
         )
         frame = _apply_split_adjustments(frame, chart.get("events", {}).get("splits", {}))
         frame["symbol"] = symbol
@@ -151,11 +155,26 @@ def make_fixture_prices(days: int = 800) -> pd.DataFrame:
     t = pd.Series(range(n), index=index, dtype=float)
     equity = 100 * (1 + 0.00025 + 0.008 * ((t % 31) == 0)).cumprod()
     gold = 100 * (1 + 0.00012 + 0.003 * ((t % 47) == 0)).cumprod()
-    liquid = pd.Series(100 * (1 + 0.00004) ** pd.Series(range(n), dtype=float).to_numpy(), index=index)
+    liquid = pd.Series(
+        100 * (1 + 0.00004) ** pd.Series(range(n), dtype=float).to_numpy(), index=index
+    )
     rows = []
-    for symbol, series in (("NIFTYBEES.NS", equity), ("GOLDBEES.NS", gold), ("LIQUIDBEES.NS", liquid)):
+    for symbol, series in (
+        ("NIFTYBEES.NS", equity),
+        ("GOLDBEES.NS", gold),
+        ("LIQUIDBEES.NS", liquid),
+    ):
         for dt, close in series.items():
-            rows.append({"date": dt, "symbol": symbol, "open": float(close * 0.999),
-                         "high": float(close * 1.002), "low": float(close * 0.998),
-                         "close": float(close), "adj_close": float(close), "volume": 1_000_000})
+            rows.append(
+                {
+                    "date": dt,
+                    "symbol": symbol,
+                    "open": float(close * 0.999),
+                    "high": float(close * 1.002),
+                    "low": float(close * 0.998),
+                    "close": float(close),
+                    "adj_close": float(close),
+                    "volume": 1_000_000,
+                }
+            )
     return pd.DataFrame(rows)

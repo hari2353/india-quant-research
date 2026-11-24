@@ -108,7 +108,9 @@ class PaperLedger:
     def close(self) -> None:
         self.connection.close()
 
-    def _latest_run(self, strategy: StrategyName, before: pd.Timestamp | None = None) -> sqlite3.Row | None:
+    def _latest_run(
+        self, strategy: StrategyName, before: pd.Timestamp | None = None
+    ) -> sqlite3.Row | None:
         query = "SELECT * FROM runs WHERE strategy = ?"
         params: list[str] = [strategy]
         if before is not None:
@@ -130,8 +132,14 @@ class PaperLedger:
             (strategy, config.initial_capital),
         )
 
-    def _risk_gate(self, strategy: StrategyName, run_date: pd.Timestamp, equity: float,
-                   previous_equity: float | None, risk: PaperRiskConfig) -> tuple[bool, str]:
+    def _risk_gate(
+        self,
+        strategy: StrategyName,
+        run_date: pd.Timestamp,
+        equity: float,
+        previous_equity: float | None,
+        risk: PaperRiskConfig,
+    ) -> tuple[bool, str]:
         if previous_equity and equity / previous_equity - 1.0 <= -risk.max_daily_loss:
             return False, "daily_loss_limit"
         account = self.connection.execute(
@@ -146,20 +154,33 @@ class PaperLedger:
                 return False, "data_gap_limit"
         return True, "risk_checks_passed"
 
-    def process_date(self, prices: pd.DataFrame, strategy: StrategyName,
-                     run_date: pd.Timestamp | str, config: PortfolioConfig | None = None,
-                     risk: PaperRiskConfig | None = None) -> PaperRun:
+    def process_date(
+        self,
+        prices: pd.DataFrame,
+        strategy: StrategyName,
+        run_date: pd.Timestamp | str,
+        config: PortfolioConfig | None = None,
+        risk: PaperRiskConfig | None = None,
+    ) -> PaperRun:
         """Process one date exactly once, using that date's open for fills and close for valuation."""
         config = config or PortfolioConfig()
         risk = risk or PaperRiskConfig()
         run_timestamp = pd.Timestamp(run_date).normalize()
         source_hash = _source_hash(prices, run_timestamp)
         existing = self.connection.execute(
-            "SELECT * FROM runs WHERE strategy = ? AND run_date = ?", (strategy, _date(run_timestamp))
+            "SELECT * FROM runs WHERE strategy = ? AND run_date = ?",
+            (strategy, _date(run_timestamp)),
         ).fetchone()
         if existing:
-            return PaperRun(strategy, run_timestamp, existing["status"], existing["reason"],
-                            existing["cash"], existing["equity"], self._order_count(strategy, _date(run_timestamp)))
+            return PaperRun(
+                strategy,
+                run_timestamp,
+                existing["status"],
+                existing["reason"],
+                existing["cash"],
+                existing["equity"],
+                self._order_count(strategy, _date(run_timestamp)),
+            )
 
         current = prices[prices["date"].eq(run_timestamp)].set_index("symbol")
         if current.empty:
@@ -170,37 +191,70 @@ class PaperLedger:
         previous = self._latest_run(strategy, run_timestamp)
         previous_equity = float(previous["equity"]) if previous else None
         cash = float(previous["cash"]) if previous else config.initial_capital
-        shares = self._holdings(strategy, previous["run_date"]) if previous else {symbol: 0 for symbol in current.index}
+        shares = (
+            self._holdings(strategy, previous["run_date"])
+            if previous
+            else {symbol: 0 for symbol in current.index}
+        )
         for symbol in current.index:
             shares.setdefault(symbol, 0)
         open_prices = current["open"].astype(float)
         close_prices = current["close"].astype(float)
-        equity_at_open = cash + sum(shares[symbol] * open_prices[symbol] for symbol in current.index)
-        allowed, reason = self._risk_gate(strategy, run_timestamp, equity_at_open, previous_equity, risk)
+        equity_at_open = cash + sum(
+            shares[symbol] * open_prices[symbol] for symbol in current.index
+        )
+        allowed, reason = self._risk_gate(
+            strategy, run_timestamp, equity_at_open, previous_equity, risk
+        )
 
         historical = prices[prices["date"] < run_timestamp]
-        rebalance = previous is None or pd.Timestamp(previous["run_date"]).month != run_timestamp.month
+        rebalance = (
+            previous is None or pd.Timestamp(previous["run_date"]).month != run_timestamp.month
+        )
         order_count = 0
         if allowed and rebalance:
-            panel = historical.pivot(index="date", columns="symbol", values="adj_close").sort_index().ffill()
+            panel = (
+                historical.pivot(index="date", columns="symbol", values="adj_close")
+                .sort_index()
+                .ffill()
+            )
             if panel.empty:
                 panel = pd.DataFrame(columns=current.index, index=pd.DatetimeIndex([]), dtype=float)
             weights = target_weights(panel, strategy, config).reindex(current.index, fill_value=0.0)
             target_values = weights * equity_at_open
-            target_shares = {symbol: int(target_values[symbol] // open_prices[symbol]) for symbol in current.index}
+            target_shares = {
+                symbol: int(target_values[symbol] // open_prices[symbol])
+                for symbol in current.index
+            }
             target_shares = self._fit_no_leverage(cash, shares, target_shares, open_prices, config)
             # Sell first so the ledger remains valid even when a rebalance changes instruments.
             for symbol in current.index:
                 delta = target_shares[symbol] - shares[symbol]
                 if delta < 0:
-                    cash, shares[symbol] = self._fill(strategy, run_timestamp, symbol, delta, cash,
-                                                       shares[symbol], open_prices[symbol], config)
+                    cash, shares[symbol] = self._fill(
+                        strategy,
+                        run_timestamp,
+                        symbol,
+                        delta,
+                        cash,
+                        shares[symbol],
+                        open_prices[symbol],
+                        config,
+                    )
                     order_count += 1
             for symbol in current.index:
                 delta = target_shares[symbol] - shares[symbol]
                 if delta > 0:
-                    cash, shares[symbol] = self._fill(strategy, run_timestamp, symbol, delta, cash,
-                                                       shares[symbol], open_prices[symbol], config)
+                    cash, shares[symbol] = self._fill(
+                        strategy,
+                        run_timestamp,
+                        symbol,
+                        delta,
+                        cash,
+                        shares[symbol],
+                        open_prices[symbol],
+                        config,
+                    )
                     order_count += 1
             reason = "rebalance_filled"
         elif not allowed:
@@ -218,18 +272,32 @@ class PaperLedger:
             for symbol in current.index:
                 self.connection.execute(
                     "INSERT INTO positions VALUES (?, ?, ?, ?, ?, ?)",
-                    (strategy, _date(run_timestamp), symbol, shares[symbol], close_prices[symbol],
-                     shares[symbol] * close_prices[symbol]),
+                    (
+                        strategy,
+                        _date(run_timestamp),
+                        symbol,
+                        shares[symbol],
+                        close_prices[symbol],
+                        shares[symbol] * close_prices[symbol],
+                    ),
                 )
         return PaperRun(strategy, run_timestamp, run_status, reason, cash, equity, order_count)
 
-    def _fit_no_leverage(self, cash: float, shares: dict[str, int], target: dict[str, int],
-                         prices: pd.Series, config: PortfolioConfig) -> dict[str, int]:
+    def _fit_no_leverage(
+        self,
+        cash: float,
+        shares: dict[str, int],
+        target: dict[str, int],
+        prices: pd.Series,
+        config: PortfolioConfig,
+    ) -> dict[str, int]:
         while True:
             projected = cash
             for symbol in prices.index:
                 delta = target[symbol] - shares[symbol]
-                execution = prices[symbol] * (1 + config.slippage_rate if delta > 0 else 1 - config.slippage_rate)
+                execution = prices[symbol] * (
+                    1 + config.slippage_rate if delta > 0 else 1 - config.slippage_rate
+                )
                 projected -= delta * execution + abs(delta * execution) * config.cost_rate
             if projected >= -1e-9:
                 return target
@@ -239,8 +307,17 @@ class PaperLedger:
             symbol = max(candidates, key=lambda name: target[name] * prices[name])
             target[symbol] -= 1
 
-    def _fill(self, strategy: StrategyName, run_date: pd.Timestamp, symbol: str, delta: int,
-              cash: float, old_shares: int, price: float, config: PortfolioConfig) -> tuple[float, int]:
+    def _fill(
+        self,
+        strategy: StrategyName,
+        run_date: pd.Timestamp,
+        symbol: str,
+        delta: int,
+        cash: float,
+        old_shares: int,
+        price: float,
+        config: PortfolioConfig,
+    ) -> tuple[float, int]:
         execution = price * (1 + config.slippage_rate if delta > 0 else 1 - config.slippage_rate)
         notional = abs(delta * execution)
         fee = notional * config.cost_rate
@@ -273,26 +350,43 @@ class PaperLedger:
         ).fetchall()
         if not rows:
             raise ValueError(f"no paper runs for {strategy}")
-        equity = pd.Series({pd.Timestamp(row["run_date"]): row["equity"] for row in rows}, dtype=float)
-        trades = pd.read_sql_query("SELECT * FROM orders WHERE strategy = ? ORDER BY run_date",
-                                   self.connection, params=(strategy,))
-        metrics = performance_metrics(equity, trades.rename(columns={"quantity": "notional"}), equity.iloc[0])
+        equity = pd.Series(
+            {pd.Timestamp(row["run_date"]): row["equity"] for row in rows}, dtype=float
+        )
+        trades = pd.read_sql_query(
+            "SELECT * FROM orders WHERE strategy = ? ORDER BY run_date",
+            self.connection,
+            params=(strategy,),
+        )
+        metrics = performance_metrics(
+            equity, trades.rename(columns={"quantity": "notional"}), equity.iloc[0]
+        )
         return {"strategy": strategy, **metrics, "runs": len(rows)}
 
     def export(self, out: Path, strategies: tuple[StrategyName, ...]) -> None:
         out.mkdir(parents=True, exist_ok=True)
-        summaries = [self.summary(strategy) for strategy in strategies if self._latest_run(strategy)]
+        summaries = [
+            self.summary(strategy) for strategy in strategies if self._latest_run(strategy)
+        ]
         pd.DataFrame(summaries).to_csv(out / "paper_summary.csv", index=False)
-        (out / "paper_summary.json").write_text(json.dumps(summaries, indent=2, default=str), encoding="utf-8")
+        (out / "paper_summary.json").write_text(
+            json.dumps(summaries, indent=2, default=str), encoding="utf-8"
+        )
 
     def error_analysis(self) -> list[sqlite3.Row]:
         """Rejected orders grouped by (strategy, reason) — error-analysis memory."""
-        return list(self.connection.execute(
-            "SELECT strategy, reason, COUNT(*) AS count FROM paper_rejections "
-            "GROUP BY strategy, reason ORDER BY count DESC, reason"))
+        return list(
+            self.connection.execute(
+                "SELECT strategy, reason, COUNT(*) AS count FROM paper_rejections "
+                "GROUP BY strategy, reason ORDER BY count DESC, reason"
+            )
+        )
 
     def run_status(self) -> list[sqlite3.Row]:
         """Every ledger run: date, gate outcome and equity — the audit trail."""
-        return list(self.connection.execute(
-            "SELECT strategy, run_date, status, reason, equity FROM runs "
-            "ORDER BY run_date, strategy"))
+        return list(
+            self.connection.execute(
+                "SELECT strategy, run_date, status, reason, equity FROM runs "
+                "ORDER BY run_date, strategy"
+            )
+        )

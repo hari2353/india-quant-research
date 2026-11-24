@@ -34,7 +34,18 @@ def main() -> None:
     backtest.add_argument("--out", type=Path, default=Path("reports"))
     tearsheet = sub.add_parser("tearsheet")
     tearsheet.add_argument("--prices", type=Path, required=True)
-    tearsheet.add_argument("--strategy", choices=["buy_hold", "equal_weight", "balanced", "defensive_rotation", "forecast_tilt", "event_defensive"], default="equal_weight")
+    tearsheet.add_argument(
+        "--strategy",
+        choices=[
+            "buy_hold",
+            "equal_weight",
+            "balanced",
+            "defensive_rotation",
+            "forecast_tilt",
+            "event_defensive",
+        ],
+        default="equal_weight",
+    )
     tearsheet.add_argument("--out", type=Path, default=Path("reports/tearsheet.md"))
     paper = sub.add_parser("paper-run")
     paper.add_argument("--prices", type=Path, required=True)
@@ -60,7 +71,9 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "download":
         end = datetime.now(timezone.utc).date()
-        prices = download_yahoo_daily(RESEARCH_UNIVERSE, end - timedelta(days=365 * args.years), end)
+        prices = download_yahoo_daily(
+            RESEARCH_UNIVERSE, end - timedelta(days=365 * args.years), end
+        )
         save_prices(prices, args.out)
         print(f"saved {len(prices):,} rows to {args.out}")
     elif args.command == "backtest":
@@ -69,13 +82,19 @@ def main() -> None:
         for strategy, metrics in payload["summary"].items():
             dsr = guard["deflated_sharpe"].get(strategy)
             dsr_text = f" DSR={dsr:.2f}" if dsr is not None else ""
-            print(f"{strategy}: CAGR={float(metrics['cagr']):.2%} maxDD={float(metrics['max_drawdown']):.2%} "
-                  f"final=Rs {float(metrics['final_value']):,.0f}{dsr_text}")
+            print(
+                f"{strategy}: CAGR={float(metrics['cagr']):.2%} maxDD={float(metrics['max_drawdown']):.2%} "
+                f"final=Rs {float(metrics['final_value']):,.0f}{dsr_text}"
+            )
         pbo_value = guard["pbo"]
         if pbo_value is None:
             print(f"overfit guard: {payload.get('overfit_note', 'pbo unavailable')}")
         else:
-            verdict = "HIGH — in-sample winners rarely repeat out of sample" if pbo_value >= 0.5 else "acceptable"
+            verdict = (
+                "HIGH — in-sample winners rarely repeat out of sample"
+                if pbo_value >= 0.5
+                else "acceptable"
+            )
             print(f"overfit guard: PBO={pbo_value:.2f} ({verdict})")
     elif args.command == "tearsheet":
         from .report import tearsheet as build_tearsheet
@@ -87,12 +106,18 @@ def main() -> None:
         ledger = PaperLedger(args.db)
         try:
             strategies = ("equal_weight", "balanced", "forecast_tilt", "event_defensive")
-            dates = sorted(prices["date"].unique()) if args.replay else [pd.Timestamp(args.date).normalize() if args.date else prices["date"].max()]
+            dates = (
+                sorted(prices["date"].unique())
+                if args.replay
+                else [pd.Timestamp(args.date).normalize() if args.date else prices["date"].max()]
+            )
             for date_value in dates:
                 for strategy in strategies:
                     result = ledger.process_date(prices, strategy, date_value, PortfolioConfig())
-                    print(f"{result.date.date()} {strategy}: {result.status} {result.reason} "
-                          f"equity=Rs {result.equity:,.2f} orders={result.order_count}")
+                    print(
+                        f"{result.date.date()} {strategy}: {result.status} {result.reason} "
+                        f"equity=Rs {result.equity:,.2f} orders={result.order_count}"
+                    )
             ledger.export(args.out, strategies)
         finally:
             ledger.close()
@@ -106,15 +131,19 @@ def main() -> None:
             print(f"runs: {len(runs)} ledgered")
             if args.out:
                 args.out.parent.mkdir(parents=True, exist_ok=True)
-                args.out.write_text(json.dumps({"rejections": rejections, "runs": runs},
-                                               indent=2, default=str), encoding="utf-8")
+                args.out.write_text(
+                    json.dumps({"rejections": rejections, "runs": runs}, indent=2, default=str),
+                    encoding="utf-8",
+                )
         finally:
             ledger.close()
     elif args.command == "live-plan":
         config = LiveConfig.from_env()
         try:
             broker = KiteBroker(config)
-            plan = build_trade_plan(load_prices(args.prices), args.strategy, broker, config, args.date)
+            plan = build_trade_plan(
+                load_prices(args.prices), args.strategy, broker, config, args.date
+            )
             save_plan(plan, args.plan)
             print(f"saved plan {args.plan} hash={plan.hash} orders={len(plan.orders)}")
             for order in plan.orders:

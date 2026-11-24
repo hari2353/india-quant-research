@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 
 
-def bootstrap_drawdowns(equity: pd.Series, simulations: int = 1000, seed: int = 7) -> dict[str, float]:
+def bootstrap_drawdowns(
+    equity: pd.Series, simulations: int = 1000, seed: int = 7
+) -> dict[str, float]:
     """Block-bootstrap daily returns and report probabilistic drawdown risk."""
     returns = equity.pct_change().dropna().to_numpy()
     if len(returns) < 20:
@@ -16,8 +18,8 @@ def bootstrap_drawdowns(equity: pd.Series, simulations: int = 1000, seed: int = 
         sampled: list[float] = []
         while len(sampled) < len(returns):
             start = int(rng.integers(0, len(returns) - block + 1))
-            sampled.extend(returns[start:start + block])
-        curve = np.cumprod(1 + np.asarray(sampled[:len(returns)]))
+            sampled.extend(returns[start : start + block])
+        curve = np.cumprod(1 + np.asarray(sampled[: len(returns)]))
         paths.append(float((curve / np.maximum.accumulate(curve) - 1).min()))
     drawdowns = np.asarray(paths)
     return {

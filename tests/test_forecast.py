@@ -31,4 +31,3 @@ def test_forecast_series_backend_naive_explicit():
     f = forecast_series(s, backend="naive")
     assert f.model == "naive"
     assert f.point == 5.0
-

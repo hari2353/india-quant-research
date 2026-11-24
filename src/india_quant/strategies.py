@@ -26,7 +26,9 @@ def _cap_and_normalize(weights: pd.Series, config: PortfolioConfig) -> pd.Series
     return weights
 
 
-def target_weights(history: pd.DataFrame, strategy: StrategyName, config: PortfolioConfig) -> pd.Series:
+def target_weights(
+    history: pd.DataFrame, strategy: StrategyName, config: PortfolioConfig
+) -> pd.Series:
     """Return weights based only on history ending before the execution date."""
     symbols = list(history.columns)
     if not symbols:
@@ -48,7 +50,11 @@ def target_weights(history: pd.DataFrame, strategy: StrategyName, config: Portfo
                 as_of = date.today()
             else:
                 as_of = history.index[-1].date() + timedelta(days=1)
-            if upcoming_events(as_of) and "NIFTYBEES.NS" in weights.index and "LIQUIDBEES.NS" in weights.index:
+            if (
+                upcoming_events(as_of)
+                and "NIFTYBEES.NS" in weights.index
+                and "LIQUIDBEES.NS" in weights.index
+            ):
                 shift = 0.20 * weights["NIFTYBEES.NS"]
                 weights["NIFTYBEES.NS"] -= shift
                 weights["LIQUIDBEES.NS"] += shift
@@ -60,6 +66,7 @@ def target_weights(history: pd.DataFrame, strategy: StrategyName, config: Portfo
         weights = pd.Series({symbol: target.get(symbol, 0.0) for symbol in symbols})
         try:
             from .forecast import forecast_signal
+
             for symbol in symbols:
                 col = history[symbol] if symbol in history.columns else None
                 if col is not None and len(col) >= 5:

@@ -11,6 +11,7 @@ in-sample artifact" (Bailey & López de Prado 2014).
 Numpy + stdlib only (no scipy), deterministic, and thin data is refused
 instead of reporting fake confidence.
 """
+
 from __future__ import annotations
 
 import itertools
@@ -113,7 +114,7 @@ def pbo(frame: pd.DataFrame, *, splits: int = 16) -> float:
     per = len(values) // splits
     if per < 4:
         raise ValueError(f"too few rows per split ({per}); add history")
-    blocks = [values[i * per:(i + 1) * per] for i in range(splits)]
+    blocks = [values[i * per : (i + 1) * per] for i in range(splits)]
     k = values.shape[1]
     combos = list(itertools.combinations(range(splits), splits // 2))
     strikes = 0
@@ -124,17 +125,21 @@ def pbo(frame: pd.DataFrame, *, splits: int = 16) -> float:
         is_sharpes = []
         oos_sharpes = []
         for candidate in range(k):
-            is_returns = np.concatenate([blocks[i] for i in range(splits) if is_mask[i]])[:, candidate]
-            oos_returns = np.concatenate([blocks[i] for i in range(splits) if not is_mask[i]])[:, candidate]
+            is_returns = np.concatenate([blocks[i] for i in range(splits) if is_mask[i]])[
+                :, candidate
+            ]
+            oos_returns = np.concatenate([blocks[i] for i in range(splits) if not is_mask[i]])[
+                :, candidate
+            ]
             is_std = is_returns.std(ddof=1)
             oos_std = oos_returns.std(ddof=1)
             is_sharpes.append(float(is_returns.mean() / is_std) if is_std else 0.0)
             oos_sharpes.append(float(oos_returns.mean() / oos_std) if oos_std else 0.0)
-        is_rank = _avg_rank(np.asarray(is_sharpes))    # k = best IS
+        is_rank = _avg_rank(np.asarray(is_sharpes))  # k = best IS
         oos_rank = _avg_rank(np.asarray(oos_sharpes))  # k = best OOS
-        relative = (oos_rank - 0.5) / k                # (0,1); near 1 = best OOS
+        relative = (oos_rank - 0.5) / k  # (0,1); near 1 = best OOS
         logits = np.log(relative / (1 - relative))
-        best_is = is_rank > k / 2                      # the IS winners...
-        strikes += int(np.sum(logits[best_is] < 0))    # ...below the OOS median
+        best_is = is_rank > k / 2  # the IS winners...
+        strikes += int(np.sum(logits[best_is] < 0))  # ...below the OOS median
         judged += int(best_is.sum())
     return float(strikes / judged) if judged else 0.0

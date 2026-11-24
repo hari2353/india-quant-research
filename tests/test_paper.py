@@ -46,12 +46,17 @@ def test_paper_risk_gate_halts_and_does_not_place_orders(tmp_path):
         ledger.process_date(prices, "balanced", dates[0], PortfolioConfig())
         initial_orders = ledger.connection.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
         result = ledger.process_date(
-            prices, "balanced", dates[-1], PortfolioConfig(),
+            prices,
+            "balanced",
+            dates[-1],
+            PortfolioConfig(),
             PaperRiskConfig(max_data_gap_days=5),
         )
         assert result.status == "halted"
         assert result.reason == "halted:data_gap_limit"
-        assert ledger.connection.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == initial_orders
+        assert (
+            ledger.connection.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == initial_orders
+        )
     finally:
         ledger.close()
 
@@ -63,7 +68,8 @@ def test_error_analysis_groups_rejections_and_runs(tmp_path):
         conn.execute("INSERT INTO accounts VALUES ('s', 50000.0, '2026-01-01')")
         conn.execute(
             "INSERT INTO runs (strategy, run_date, status, reason, cash, equity, source_hash, created_at) "
-            "VALUES ('s', '2026-01-05', 'rebalance_filled', 'ok', 1000.0, 50000.0, 'h', '2026-01-05')")
+            "VALUES ('s', '2026-01-05', 'rebalance_filled', 'ok', 1000.0, 50000.0, 'h', '2026-01-05')"
+        )
         for symbol, quantity, status, reason in [
             ("NIFTYBEES.NS", 10, "rejected", "below_min_price"),
             ("NIFTYBEES.NS", 10, "rejected", "below_min_price"),
@@ -72,7 +78,8 @@ def test_error_analysis_groups_rejections_and_runs(tmp_path):
             conn.execute(
                 "INSERT INTO orders (strategy, run_date, symbol, side, quantity, requested_price, status, reason) "
                 "VALUES ('s', '2026-01-05', ?, 'buy', ?, 1.0, ?, ?)",
-                (symbol, quantity, status, reason))
+                (symbol, quantity, status, reason),
+            )
         conn.commit()
         groups = [dict(r) for r in ledger.error_analysis()]
         assert groups[0] == {"strategy": "s", "reason": "below_min_price", "count": 2}

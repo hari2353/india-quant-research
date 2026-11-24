@@ -4,6 +4,7 @@ Pure-Python, dependency-free risk measures over a return series. Returns are
 treated as per-period (e.g. daily) returns; annualization is left to the
 caller so the functions stay honest about their inputs.
 """
+
 from __future__ import annotations
 
 import math

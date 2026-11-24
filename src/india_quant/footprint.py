@@ -17,4 +17,8 @@ def backtest_carbon(cpu_hours, cpu_power_w=65.0, *, carbon_intensity_g_per_kwh=4
         raise ValueError("carbon intensity must be >= 0")
     energy = backtest_energy(cpu_hours, cpu_power_w, pue=pue)
     kg = energy["kwh"] * carbon_intensity_g_per_kwh / 1000
-    return {**energy, "carbon_intensity_g_per_kwh": carbon_intensity_g_per_kwh, "kgco2e": round(kg, 4)}
+    return {
+        **energy,
+        "carbon_intensity_g_per_kwh": carbon_intensity_g_per_kwh,
+        "kgco2e": round(kg, 4),
+    }

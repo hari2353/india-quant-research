@@ -12,5 +12,9 @@ def test_metrics_include_drawdown_and_cagr():
 
 
 def test_bootstrap_is_reproducible():
-    equity = pd.Series((1.001 ** i for i in range(100)), index=pd.date_range("2020-01-01", periods=100))
-    assert bootstrap_drawdowns(equity, simulations=100, seed=7) == bootstrap_drawdowns(equity, simulations=100, seed=7)
+    equity = pd.Series(
+        (1.001**i for i in range(100)), index=pd.date_range("2020-01-01", periods=100)
+    )
+    assert bootstrap_drawdowns(equity, simulations=100, seed=7) == bootstrap_drawdowns(
+        equity, simulations=100, seed=7
+    )

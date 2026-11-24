@@ -49,9 +49,15 @@ def test_event_strategy_needs_no_warmup_and_fires_on_mpc_window():
 def test_backtest_event_defensive_diverges_from_balanced_in_event_month():
     dates = pd.bdate_range("2025-11-03", "2026-03-31")
     rows = []
-    for symbol, level in (("NIFTYBEES.NS", 250.0), ("GOLDBEES.NS", 70.0), ("LIQUIDBEES.NS", 1000.0)):
+    for symbol, level in (
+        ("NIFTYBEES.NS", 250.0),
+        ("GOLDBEES.NS", 70.0),
+        ("LIQUIDBEES.NS", 1000.0),
+    ):
         path = level * (1.0 + 0.0002 * np.arange(len(dates)))
-        rows.append(pd.DataFrame({"date": dates, "symbol": symbol, "open": path, "adj_close": path}))
+        rows.append(
+            pd.DataFrame({"date": dates, "symbol": symbol, "open": path, "adj_close": path})
+        )
     prices = pd.concat(rows, ignore_index=True)
     config = PortfolioConfig()
     defensive = run_backtest(prices, "event_defensive", config)

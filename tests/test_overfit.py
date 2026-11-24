@@ -13,6 +13,7 @@ from india_quant.data import make_fixture_prices
 from india_quant.metrics import monthly_returns, omega_ratio, sortino_ratio, tail_ratio, var_95
 from india_quant.overfit import deflated_sharpe, pbo
 
+
 # ── tearsheet metrics ────────────────────────────────────────────────────────
 def _equity(growth: float = 0.0004, days: int = 300, seed: int = 3) -> pd.Series:
     rng = np.random.default_rng(seed)
@@ -62,7 +63,7 @@ def test_deflated_sharpe_shrinks_when_many_trials_are_tried() -> None:
     daily = equity.pct_change().dropna()
     alone = deflated_sharpe(daily, trials=1)
     crowded = deflated_sharpe(daily, trials=100)
-    assert alone >= crowded          # more trials ⇒ harder to pass
+    assert alone >= crowded  # more trials ⇒ harder to pass
     assert 0.0 < alone <= 1.0 and 0.0 < crowded <= 1.0
 
 

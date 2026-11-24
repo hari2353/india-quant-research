@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 
 
-def performance_metrics(equity: pd.Series, trades: pd.DataFrame, initial: float) -> dict[str, float]:
+def performance_metrics(
+    equity: pd.Series, trades: pd.DataFrame, initial: float
+) -> dict[str, float]:
     equity = equity.dropna()
     daily = equity.pct_change().fillna(0.0)
     years = max((equity.index[-1] - equity.index[0]).days / 365.25, 1 / 365.25)
@@ -82,7 +84,12 @@ def monthly_returns(equity: pd.Series) -> pd.DataFrame:
     values = []
     prior = start
     for timestamp, value in monthly.items():
-        values.append({"year": int(timestamp.year), "month": int(timestamp.month),
-                       "return": float(value / prior - 1.0) if prior else 0.0})
+        values.append(
+            {
+                "year": int(timestamp.year),
+                "month": int(timestamp.month),
+                "return": float(value / prior - 1.0) if prior else 0.0,
+            }
+        )
         prior = float(value)
     return pd.DataFrame(values)
